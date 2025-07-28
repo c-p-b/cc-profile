@@ -8,7 +8,12 @@ export default {
     "**/*.(test|spec).+(ts|tsx|js)",
   ],
   transform: {
-    "^.+\\.(ts|tsx)$": ["ts-jest", { useESM: true }],
+    "^.+\\.(ts|tsx)$": ["ts-jest", { 
+      useESM: true,
+      tsconfig: {
+        types: ["node", "jest"]
+      }
+    }],
   },
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",

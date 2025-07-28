@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import os from "os";
 import { fileURLToPath } from "url";
 import { OTLPTraceData, ParsedSpan } from "./otlp-parser.js";
 
@@ -24,7 +23,7 @@ export class OTLPHTMLGenerator {
   private templatePath: string;
   private bundlePath: string;
 
-  constructor(options: OTLPHTMLGeneratorOptions = {}) {
+  constructor(_options: OTLPHTMLGeneratorOptions = {}) {
     // Use bundled files from npm installation location
     // First try to find frontend files relative to this module (npm install case)
     this.frontendDir = path.join(__dirname, "..", "frontend");

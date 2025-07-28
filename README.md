@@ -118,7 +118,7 @@ Logs are saved to: `~/.cc-profile/logs/<run_id>/`
 
 ## Under the Hood
 
-cc-profile collects data primarily in two ways:
+cc-profile collects data primarily by the following methodologies:
 
 1. Instrumenting the API requests to claude via the interceptor pattern inspired by [claude-trace]
 2. Instrumenting hooks by monkey patching the calls to subprocess via same interceptor pattern
@@ -128,7 +128,7 @@ cc-profile collects data primarily in two ways:
 
 **HTTP Interception**: Uses Node.js `--require` flag to monkey-patch `global.fetch` and `subprocess` before Claude Code starts. This captures all HTTP traffic and hooks spawned transparently without modifying Claude's source code.
 
-**Hook System**: Deploys a universal orchestrator hook that registers for Claude Code events ( PostToolUse) and outputs OTEL compatible traces (OTLP)
+**Hook System**: Deploys a universal orchestrator hook that registers for Claude Code events (e.g. PostToolUse) and outputs OTEL compatible traces (OTLP)
 
 **OTLP Export**: Custom OpenTelemetry exporter writes spans directly to JSONL files in standard OTLP format, enabling both local visualization and future platform integration.
 

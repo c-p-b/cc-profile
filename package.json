@@ -8,8 +8,8 @@
     "cc-profile": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && cp src/interceptor-loader.mjs src/spawn-preload.cjs src/otlp-template.html dist/ && npm run build:frontend",
-    "build:frontend": "cd frontend && npm run build",
+    "build": "tsc && cp src/interceptor-loader.mjs src/spawn-preload.cjs src/otlp-template.html dist/ && chmod +x dist/cli.js && npm run build:frontend",
+    "build:frontend": "cd frontend && npm ci && npm run build",
     "dev": "concurrently \"npm run dev:core\" \"npm run dev:copy\" \"npm run dev:frontend\"",
     "dev:core": "tsc --watch --preserveWatchOutput",
     "dev:copy": "nodemon --watch src/interceptor-loader.mjs --watch src/spawn-preload.cjs --watch src/otlp-template.html --exec 'mkdir -p dist && cp src/interceptor-loader.mjs src/spawn-preload.cjs src/otlp-template.html dist/'",
@@ -19,6 +19,7 @@
     "dev:html": "npm run build && node dist/cli.js --generate-html",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
+    "postinstall": "chmod +x dist/cli.js 2>/dev/null || true",
     "test": "jest --coverage --passWithNoTests",
     "test:watch": "jest --watch --coverage",
     "test:ci": "jest --coverage --ci --watchAll=false",
@@ -47,10 +48,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cpb/cc-profile.git"
+    "url": "git+https://github.com/cpb/cc-profile.git"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [20]
       fail-fast: true
 
     steps:
@@ -124,6 +124,9 @@ jobs:
     runs-on: ubuntu-latest
     if: success()
     environment: production # Require manual approval for production deploys
+    permissions:
+      contents: read
+      id-token: write # Required for npm provenance
 
     steps:
       - name: Checkout

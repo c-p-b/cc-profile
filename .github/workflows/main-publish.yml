@@ -157,32 +157,61 @@ jobs:
           npm pack --dry-run
           echo "📦 Package contents verified"
 
+      - name: Get package version
+        id: get_version
+        run: echo "version=$(node -p 'require("./package.json").version')" >> $GITHUB_OUTPUT
+
+      - name: Check if version exists on NPM
+        id: version_check
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if npm view cc-profile@$VERSION > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "🔍 Version $VERSION already exists on NPM"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Version $VERSION is new, proceeding with publish"
+          fi
+
+      - name: Check if GitHub release exists
+        id: release_check
+        if: steps.version_check.outputs.exists == 'false'
+        run: |
+          TAG="v${{ steps.get_version.outputs.version }}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "🔍 Release $TAG already exists on GitHub"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Release $TAG is new, will create"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish to NPM
+        if: steps.version_check.outputs.exists == 'false'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-
       - name: Create GitHub Release
-        if: success()
-        uses: actions/create-release@v1
+        if: steps.version_check.outputs.exists == 'false' && steps.release_check.outputs.exists == 'false'
+        run: |
+          gh release create "v${{ steps.get_version.outputs.version }}" \
+            --title "Release v${{ steps.get_version.outputs.version }}" \
+            --notes "## Changes
+          - Automated release from main branch
+          - See commit history for detailed changes
+
+          ## Installation
+          \`\`\`bash
+          npm install -g cc-profile@${{ steps.get_version.outputs.version }}
+          \`\`\`"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          release_name: Release v${{ steps.get_version.outputs.version }}
-          body: |
-            ## Changes
-            - Automated release from main branch
-            - See commit history for detailed changes
 
-            ## Installation
-            ```bash
-            npm install -g cc-profile@${{ steps.get_version.outputs.version }}
-            ```
-          draft: false
-          prerelease: false
-
-      - name: Get package version
-        id: get_version
-        run: echo "version=$(node -p 'require("./package.json").version')" >> $GITHUB_OUTPUT
+      - name: Already published
+        if: steps.version_check.outputs.exists == 'true'
+        run: |
+          echo "✅ Version ${{ steps.get_version.outputs.version }} already published to NPM"
+          echo "💡 To release a new version, bump the version in package.json"

@@ -1,0 +1,80 @@
+{
+  "name": "cc-profile",
+  "version": "0.1.0",
+  "description": "Zero-Touch Tracing & Observability for Claude Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "cc-profile": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && cp src/interceptor-loader.mjs src/spawn-preload.cjs src/otlp-template.html dist/ && npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "dev": "concurrently \"npm run dev:core\" \"npm run dev:copy\" \"npm run dev:frontend\"",
+    "dev:core": "tsc --watch --preserveWatchOutput",
+    "dev:copy": "nodemon --watch src/interceptor-loader.mjs --watch src/spawn-preload.cjs --watch src/otlp-template.html --exec 'mkdir -p dist && cp src/interceptor-loader.mjs src/spawn-preload.cjs src/otlp-template.html dist/'",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:init": "npm run build && node dist/cli.js init",
+    "dev:run": "npm run build && node dist/cli.js",
+    "dev:html": "npm run build && node dist/cli.js --generate-html",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "jest --coverage --passWithNoTests",
+    "test:watch": "jest --watch --coverage",
+    "test:ci": "jest --coverage --ci --watchAll=false",
+    "test:generate": "npx tsx src/cli test/test-traffic.jsonl test/index.html",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "dist/**/*",
+    "frontend/dist/**/*",
+    "frontend/template.html",
+    "hooks/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "claude",
+    "anthropic",
+    "profiling",
+    "observability",
+    "tracing",
+    "hooks",
+    "api",
+    "debugging"
+  ],
+  "author": "cc-profile Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cpb/cc-profile.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/core": "^2.0.1",
+    "@opentelemetry/otlp-transformer": "^0.203.0",
+    "@opentelemetry/resources": "^2.0.1",
+    "@opentelemetry/sdk-node": "^0.203.0",
+    "@opentelemetry/sdk-trace-base": "^2.0.1",
+    "@types/d3": "^7.4.3",
+    "d3": "^7.9.0",
+    "d3-flame-graph": "^4.1.3"
+  }
+}

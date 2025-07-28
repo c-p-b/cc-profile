@@ -1,0 +1,185 @@
+name: Main Branch - Build & Publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "frontend/**"
+      - "hooks/**"
+      - "package*.json"
+      - "tsconfig.json"
+      - "jest.config.js"
+      - "eslint.config.js"
+  workflow_dispatch: # Allow manual trigger
+
+concurrency:
+  group: main-deploy
+  cancel-in-progress: false # Don't cancel in-progress deploys
+
+jobs:
+  validate:
+    name: Validate & Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for semantic versioning
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Cache TypeScript build
+        uses: actions/cache@v3
+        with:
+          path: |
+            dist
+            tsconfig.tsbuildinfo
+          key: ts-build-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('src/**/*.ts', 'tsconfig.json') }}
+          restore-keys: |
+            ts-build-${{ runner.os }}-${{ matrix.node-version }}-
+
+      - name: Cache frontend dependencies
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: frontend-deps-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            frontend-deps-${{ runner.os }}-${{ matrix.node-version }}-
+
+      - name: Cache frontend build
+        uses: actions/cache@v3
+        with:
+          path: frontend/dist
+          key: frontend-build-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('frontend/src/**/*', 'frontend/package*.json', 'frontend/tsconfig.json') }}
+          restore-keys: |
+            frontend-build-${{ runner.os }}-${{ matrix.node-version }}-
+
+      - name: Install root dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci --prefer-offline --no-audit
+
+      - name: Security audit
+        run: |
+          npm audit --audit-level high
+          cd frontend && npm audit --audit-level high
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npx eslint src --max-warnings 0
+
+      - name: Build
+        run: npm run build
+
+      - name: Test with coverage
+        run: npm run test:ci
+
+      - name: Verify build artifacts
+        run: |
+          test -f dist/cli.js || (echo "Missing dist/cli.js" && exit 1)
+          test -f dist/index.js || (echo "Missing dist/index.js" && exit 1)
+          test -f dist/interceptor-loader.mjs || (echo "Missing interceptor-loader.mjs" && exit 1)
+          test -f dist/spawn-preload.cjs || (echo "Missing spawn-preload.cjs" && exit 1)
+          test -d frontend/dist || (echo "Missing frontend/dist" && exit 1)
+          echo "✅ All build artifacts present"
+
+      - name: Test publish dry-run
+        if: matrix.node-version == 20
+        run: npm publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Upload build artifacts
+        if: matrix.node-version == 20
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            frontend/dist/
+            package.json
+            README.md
+            LICENSE
+          retention-days: 7
+
+  publish:
+    name: Publish to NPM
+    needs: validate
+    runs-on: ubuntu-latest
+    if: success()
+    environment: production # Require manual approval for production deploys
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: .
+
+      - name: Install dependencies (production only)
+        run: |
+          npm ci --prefer-offline --no-audit --omit=dev
+          cd frontend && npm ci --prefer-offline --no-audit --omit=dev
+
+      - name: Verify package contents
+        run: |
+          npm pack --dry-run
+          echo "📦 Package contents verified"
+
+      - name: Publish to NPM
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+
+      - name: Create GitHub Release
+        if: success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          release_name: Release v${{ steps.get_version.outputs.version }}
+          body: |
+            ## Changes
+            - Automated release from main branch
+            - See commit history for detailed changes
+
+            ## Installation
+            ```bash
+            npm install -g cc-profile@${{ steps.get_version.outputs.version }}
+            ```
+          draft: false
+          prerelease: false
+
+      - name: Get package version
+        id: get_version
+        run: echo "version=$(node -p 'require("./package.json").version')" >> $GITHUB_OUTPUT

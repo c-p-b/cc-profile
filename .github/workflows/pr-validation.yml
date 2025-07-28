@@ -1,0 +1,119 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "frontend/**"
+      - "hooks/**"
+      - "package*.json"
+      - "tsconfig.json"
+      - "jest.config.js"
+      - "eslint.config.js"
+      - ".github/workflows/**"
+
+concurrency:
+  group: pr-${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Cache TypeScript build
+        uses: actions/cache@v3
+        with:
+          path: |
+            dist
+            tsconfig.tsbuildinfo
+          key: ts-build-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('src/**/*.ts', 'tsconfig.json') }}
+          restore-keys: |
+            ts-build-${{ runner.os }}-${{ matrix.node-version }}-
+
+      - name: Cache frontend dependencies
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: frontend-deps-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            frontend-deps-${{ runner.os }}-${{ matrix.node-version }}-
+
+      - name: Cache frontend build
+        uses: actions/cache@v3
+        with:
+          path: frontend/dist
+          key: frontend-build-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('frontend/src/**/*', 'frontend/package*.json', 'frontend/tsconfig.json') }}
+          restore-keys: |
+            frontend-build-${{ runner.os }}-${{ matrix.node-version }}-
+
+      - name: Cache Jest
+        uses: actions/cache@v3
+        with:
+          path: |
+            .jest-cache
+            coverage
+          key: jest-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('src/**/*.ts', 'jest.config.js') }}
+          restore-keys: |
+            jest-${{ runner.os }}-${{ matrix.node-version }}-
+
+      - name: Install root dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci --prefer-offline --no-audit
+
+      - name: Security audit
+        run: |
+          npm audit --audit-level high
+          cd frontend && npm audit --audit-level high
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npx eslint src --max-warnings 0
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test:ci
+        env:
+          JEST_CACHE_DIRECTORY: .jest-cache
+
+      - name: Verify build artifacts
+        run: |
+          test -f dist/cli.js || (echo "Missing dist/cli.js" && exit 1)
+          test -f dist/index.js || (echo "Missing dist/index.js" && exit 1)
+          test -f dist/interceptor-loader.mjs || (echo "Missing interceptor-loader.mjs" && exit 1)
+          test -f dist/spawn-preload.cjs || (echo "Missing spawn-preload.cjs" && exit 1)
+          test -d frontend/dist || (echo "Missing frontend/dist" && exit 1)
+          echo "✅ All build artifacts present"
+
+      - name: Test package integrity
+        run: npm pack --dry-run
+
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == 20
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

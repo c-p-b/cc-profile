@@ -1,0 +1,7 @@
+[allowlist]
+  description = "Allowlist for cc-profile"
+  paths = [
+    '''test/.*\.jsonl$''',
+    '''test/.*\.html$''',
+    '''\.cc-profile/.*'''
+  ]

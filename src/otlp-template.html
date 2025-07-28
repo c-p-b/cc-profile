@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <title>cc-profile session __SESSION_ID__</title>
+    <meta charset="UTF-8" />
+    <script>
+      const SESSION_ID = "__SESSION_ID__";
+      const PARENT_SESSION_ID = __PARENT_SESSION_ID__;
+    </script>
+  </head>
+  <body>
+    <h1>Session: __SESSION_ID__</h1>
+    <div id="trace-viewer">Loading...</div>
+    <script>
+      // Polling logic will be added by OTLP generator
+      console.log("Session viewer initialized for:", SESSION_ID);
+    </script>
+  </body>
+</html>

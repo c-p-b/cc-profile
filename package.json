@@ -48,7 +48,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cpb/cc-profile.git"
+    "url": "git+https://github.com/c-p-b/cc-profile.git"
   },
   "engines": {
     "node": ">=20.0.0"

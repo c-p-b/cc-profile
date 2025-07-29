@@ -94,7 +94,7 @@ function interceptedSpawn(command, args = [], options = {}) {
     command === "/bin/sh" ||
     command === "bash" ||
     command === "/bin/bash";
-  const hasEchoInArgs = args.some((arg) => arg.includes("INTERCEPTOR TEST"));
+  const hasEchoInArgs = args.some((arg) => typeof arg === 'string' && arg.includes("INTERCEPTOR TEST"));
 
   // Check if this is an official Claude hook OR our test patterns
   if (isClaudeHook(command, args, options) || hasEchoInArgs) {

@@ -1,6 +1,6 @@
 {
   "name": "cc-profile",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Zero-Touch Tracing & Observability for Claude Code",
   "type": "module",
   "main": "dist/index.js",

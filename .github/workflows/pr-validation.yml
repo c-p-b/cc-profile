@@ -37,7 +37,7 @@ jobs:
           cache: "npm"
 
       - name: Cache TypeScript build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             dist
@@ -47,7 +47,7 @@ jobs:
             ts-build-${{ runner.os }}-${{ matrix.node-version }}-
 
       - name: Cache frontend dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: frontend/node_modules
           key: frontend-deps-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('frontend/package-lock.json') }}
@@ -55,7 +55,7 @@ jobs:
             frontend-deps-${{ runner.os }}-${{ matrix.node-version }}-
 
       - name: Cache frontend build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: frontend/dist
           key: frontend-build-${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('frontend/src/**/*', 'frontend/package*.json', 'frontend/tsconfig.json') }}
@@ -63,7 +63,7 @@ jobs:
             frontend-build-${{ runner.os }}-${{ matrix.node-version }}-
 
       - name: Cache Jest
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             .jest-cache

@@ -431,7 +431,7 @@ async function initCCProfile(): Promise<void> {
     }
 
     // Create wrapper script
-    const wrapperContent = `#!/bin/bash
+    const wrapperContent = `#!/usr/bin/env bash
 # cc-profile wrapper for Claude Code
 
 # Parse cc-profile specific arguments
